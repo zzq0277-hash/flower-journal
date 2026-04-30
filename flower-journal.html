@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>花草日记</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Noto+Serif+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FAF6F0; --parchment: #F2EBE0;
+    --sage: #7A9E7E; --sage-light: #A8C4AB; --sage-dark: #4E7253;
+    --terracotta: #C17B5A; --terracotta-light: #E8A882;
+    --ink: #2C2416; --ink-light: #6B5D4F; --border: #D4C8B8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif SC', serif; background: var(--cream); color: var(--ink);
+    min-height: 100vh; max-width: 420px; margin: 0 auto; overflow-x: hidden;
+  }
+  .app-header {
+    background: var(--sage-dark); padding: 18px 20px 14px;
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .app-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--cream); }
+  .app-title span { font-style: italic; color: var(--sage-light); }
+  .header-btn {
+    background: var(--terracotta); border: none; color: white;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .view { display: none; padding: 0 0 80px; animation: fadeIn 0.3s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity:0;transform:translateY(8px); } to { opacity:1;transform:translateY(0); } }
+  .garden-stats {
+    background: linear-gradient(135deg, var(--sage-dark), var(--sage));
+    color: white; padding: 16px 20px; display: flex; gap: 24px;
+  }
+  .stat { text-align: center; }
+  .stat-num { font-size: 28px; font-family: 'Playfair Display', serif; }
+  .stat-label { font-size: 11px; opacity: 0.8; }
+  .section-title {
+    font-family: 'Playfair Display', serif; font-size: 15px; color: var(--ink-light);
+    padding: 16px 20px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  }
+  .flower-grid { padding: 8px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .flower-card {
+    background: white; border-radius: 14px; border: 1px solid var(--border);
+    overflow: hidden; display: flex; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: box-shadow 0.2s;
+  }
+  .flower-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  .card-img { width: 90px; height: 90px; object-fit: cover; flex-shrink: 0; }
+  .card-img-placeholder {
+    width: 90px; height: 90px; flex-shrink: 0; background: var(--parchment);
+    display: flex; align-items: center; justify-content: center; font-size: 32px;
+  }
+  .card-body { padding: 10px 12px; flex: 1; }
+  .card-name { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+  .card-species { font-size: 11px; color: var(--ink-light); font-style: italic; margin-bottom: 6px; }
+  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--parchment); color: var(--ink-light); border: 1px solid var(--border); }
+  .tag.water { background: #E8F4FD; color: #2980b9; border-color: #BDE0F5; }
+  .tag.sun { background: #FEF9E7; color: #D4AC0D; border-color: #F9E79F; }
+  .card-date { font-size: 10px; color: var(--border); margin-top: 6px; }
+  .empty-state { text-align: center; padding: 60px 30px; color: var(--ink-light); }
+  .empty-state .emoji { font-size: 56px; display: block; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; line-height: 1.8; }
+  .add-header {
+    background: var(--parchment); padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .back-btn { background: none; border: none; color: var(--sage-dark); font-size: 20px; cursor: pointer; padding: 4px; }
+  .view-title { font-family: 'Playfair Display', serif; font-size: 18px; }
+  .upload-zone {
+    margin: 16px; border: 2px dashed var(--sage-light); border-radius: 16px;
+    background: var(--parchment); min-height: 200px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; position: relative; overflow: hidden;
+  }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-text { color: var(--ink-light); font-size: 13px; text-align: center; line-height: 1.6; }
+  .upload-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; display: none; }
+  .ai-badge {
+    margin: 0 16px 12px; background: linear-gradient(135deg, #2C3E50, #3D7A4E);
+    border-radius: 12px; padding: 12px 16px; color: white;
+    display: none; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.6;
+  }
+  .ai-badge .ai-label { font-size: 10px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+  .form-section { padding: 0 16px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--ink-light); margin-bottom: 5px; display: block; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-family: 'Noto Serif SC', serif; font-size: 14px; color: var(--ink); background: white; outline: none;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--sage); }
+  .form-textarea { resize: none; height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .identify-btn {
+    width: calc(100% - 32px); margin: 0 16px 12px; background: var(--sage-dark); color: white;
+    border: none; border-radius: 12px; padding: 13px; font-size: 14px;
+    font-family: 'Noto Serif SC', serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .identify-btn:disabled { background: var(--border); cursor: not-allowed; }
+  .save-btn {
+    width: calc(100% - 32px); margin: 16px 16px 0; background: var(--terracotta); color: white;
+    border: none; border-radius: 12px; padding: 14px; font-size: 15px;
+    font-family: 'Noto Serif SC', serif; cursor: pointer;
+  }
+  .detail-hero { position: relative; height: 240px; overflow: hidden; background: var(--parchment); }
+  .detail-hero img { width: 100%; height: 100%; object-fit: cover; }
+  .detail-placeholder {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 72px; background: linear-gradient(135deg, var(--parchment), var(--sage-light));
+  }
+  .detail-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6)); padding: 20px;
+  }
+  .detail-name { font-family: 'Playfair Display', serif; font-size: 26px; color: white; }
+  .detail-species-txt { font-size: 13px; color: rgba(255,255,255,0.8); font-style: italic; }
+  .detail-back, .detail-delete {
+    position: absolute; top: 16px; background: rgba(255,255,255,0.85); border: none;
+    width: 34px; height: 34px; border-radius: 50%; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .detail-back { left: 16px; }
+  .detail-delete { right: 16px; color: #c0392b; }
+  .detail-body { padding: 16px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .info-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+  .info-card .ico { font-size: 22px; display: block; margin-bottom: 4px; }
+  .info-card .val { font-size: 13px; font-weight: 500; }
+  .info-card .lbl { font-size: 10px; color: var(--ink-light); margin-top: 2px; }
+  .section-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .section-card h3 { font-family: 'Playfair Display', serif; font-size: 14px; color: var(--sage-dark); margin-bottom: 8px; }
+  .section-card p { font-size: 13px; color: var(--ink-light); line-height: 1.7; }
+  .logs-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-item { background: var(--parchment); border-radius: 10px; padding: 10px 12px; font-size: 13px; border-left: 3px solid var(--sage); }
+  .log-date { font-size: 10px; color: var(--ink-light); margin-bottom: 3px; }
+  .add-log-row { display: flex; gap: 8px; margin-top: 8px; }
+  .add-log-row input {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-family: 'Noto Serif SC', serif; font-size: 13px; outline: none;
+  }
+  .add-log-row button { background: var(--sage-dark); color: white; border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; cursor: pointer; }
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 420px; background: white; border-top: 1px solid var(--border); display: flex; z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; padding: 10px 0; background: none; border: none;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    cursor: pointer; color: var(--ink-light); font-size: 10px; font-family: 'Noto Serif SC', serif;
+  }
+  .nav-ico { font-size: 22px; }
+  .nav-btn.active { color: var(--sage-dark); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-title">花草 <span>日记</span></div>
+  <button class="header-btn" onclick="showView('add')">＋</button>
+</div>
+
+<!-- HOME -->
+<div id="view-home" class="view active">
+  <div class="garden-stats">
+    <div class="stat"><div class="stat-num" id="total-count">0</div><div class="stat-label">盆花草</div></div>
+    <div class="stat"><div class="stat-num" id="log-count">0</div><div class="stat-label">条养护记录</div></div>
+  </div>
+  <div class="section-title">🌿 我的花园</div>
+  <div class="flower-grid" id="flower-list">
+    <div class="empty-state">
+      <span class="emoji">🌱</span>
+      <p>花园还是空的<br>点右上角 ＋ 添加第一盆花草</p>
+    </div>
+  </div>
+</div>
+
+<!-- ADD -->
+<div id="view-add" class="view">
+  <div class="add-header">
+    <button class="back-btn" onclick="showView('home')">←</button>
+    <div class="view-title">添加新花草</div>
+  </div>
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="photo-input" accept="image/*" onchange="handlePhoto(event)">
+    <div class="upload-icon" id="upload-icon">📷</div>
+    <div class="upload-text" id="upload-text">点击选择图片<br><small>AI 将自动识别花卉品种</small></div>
+    <img id="upload-preview" class="upload-preview">
+  </div>
+  <button class="identify-btn" id="identify-btn" onclick="identifyFlower()" disabled>
+    <span id="identify-text">✨ 请先上传图片</span>
+  </button>
+  <div class="ai-badge" id="ai-badge">
+    <div style="font-size:20px;flex-shrink:0">🤖</div>
+    <div><div class="ai-label">AI 识别结果</div><div id="ai-text"></div></div>
+  </div>
+  <div class="form-section">
+    <div class="form-group">
+      <label class="form-label">花草昵称 *</label>
+      <input class="form-input" id="f-name" placeholder="给它起个名字吧">
+    </div>
+    <div class="form-group">
+      <label class="form-label">品种 / 学名</label>
+      <input class="form-input" id="f-species" placeholder="AI识别后自动填写">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">☀️ 光照</label>
+        <select class="form-select" id="f-light">
+          <option value="">请选择</option>
+          <option>全日照</option><option>半日照</option><option>散射光</option><option>耐阴</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">💧 浇水</label>
+        <select class="form-select" id="f-water">
+          <option value="">请选择</option>
+          <option>每天</option><option>2-3天一次</option><option>每周一次</option><option>2周一次</option><option>按需浇水</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📝 养护心得</label>
+      <textarea class="form-textarea" id="f-note" placeholder="记录你的养护经验..."></textarea>
+    </div>
+  </div>
+  <button class="save-btn" onclick="saveFlower()">🌸 保存到花园</button>
+  <div style="height:20px"></div>
+</div>
+
+<!-- DETAIL -->
+<div id="view-detail" class="view">
+  <div class="detail-hero">
+    <div class="detail-placeholder" id="d-placeholder">🌸</div>
+    <img id="d-img" style="display:none;width:100%;height:100%;object-fit:cover" alt="">
+    <div class="detail-overlay">
+      <div class="detail-name" id="d-name"></div>
+      <div class="detail-species-txt" id="d-species"></div>
+    </div>
+    <button class="detail-back" onclick="showView('home')">←</button>
+    <button class="detail-delete" onclick="deleteFlower()">🗑</button>
+  </div>
+  <div class="detail-body">
+    <div class="info-grid" id="d-info"></div>
+    <div class="section-card" id="d-ai-card" style="display:none">
+      <h3>🤖 AI 识别信息</h3>
+      <p id="d-ai"></p>
+    </div>
+    <div class="section-card" id="d-note-card" style="display:none">
+      <h3>📝 养护心得</h3>
+      <p id="d-note"></p>
+    </div>
+    <div class="section-card">
+      <h3>🗓 养护日志</h3>
+      <div class="logs-list" id="d-logs"></div>
+      <div class="add-log-row">
+        <input id="log-input" placeholder="记录今天的养护..." onkeydown="if(event.key==='Enter')addLog()">
+        <button onclick="addLog()">记录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-nav" id="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="showView('home')"><span class="nav-ico">🏡</span>花园</button>
+  <button class="nav-btn" id="nav-add" onclick="showView('add')"><span class="nav-ico">➕</span>添加</button>
+</div>
+
+<script>
+let flowers = JSON.parse(localStorage.getItem('flower-journal') || '[]');
+let currentId = null;
+let imgBase64 = null;
+let imgDataUrl = null;
+
+function save() { localStorage.setItem('flower-journal', JSON.stringify(flowers)); }
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('bottom-nav').style.display = name === 'detail' ? 'none' : 'flex';
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('nav-' + name);
+  if (nb) nb.classList.add('active');
+  if (name === 'home') renderHome();
+  if (name === 'add') resetForm();
+}
+
+function renderHome() {
+  const logs = flowers.reduce((a, f) => a + (f.logs?.length || 0), 0);
+  document.getElementById('total-count').textContent = flowers.length;
+  document.getElementById('log-count').textContent = logs;
+  const list = document.getElementById('flower-list');
+  if (!flowers.length) {
+    list.innerHTML = '<div class="empty-state"><span class="emoji">🌱</span><p>花园还是空的<br>点右上角 ＋ 添加第一盆花草</p></div>';
+    return;
+  }
+  list.innerHTML = flowers.slice().reverse().map(f => `
+    <div class="flower-card" onclick="openDetail('${f.id}')">
+      ${f.img ? `<img class="card-img" src="${f.img}">` : '<div class="card-img-placeholder">🌸</div>'}
+      <div class="card-body">
+        <div class="card-name">${f.name}</div>
+        <div class="card-species">${f.species || '品种待确认'}</div>
+        <div class="card-tags">
+          ${f.water ? `<span class="tag water">💧${f.water}</span>` : ''}
+          ${f.light ? `<span class="tag sun">☀️${f.light}</span>` : ''}
+        </div>
+        <div class="card-date">添加于 ${f.date}</div>
+      </div>
+    </div>`).join('');
+}
+
+function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imgDataUrl = ev.target.result;
+    imgBase64 = imgDataUrl.split(',')[1];
+    const p = document.getElementById('upload-preview');
+    p.src = imgDataUrl; p.style.display = 'block';
+    document.getElementById('upload-icon').style.display = 'none';
+    document.getElementById('upload-text').style.display = 'none';
+    const btn = document.getElementById('identify-btn');
+    btn.disabled = false;
+    document.getElementById('identify-text').textContent = '✨ AI 识别花卉品种';
+    document.getElementById('ai-badge').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function identifyFlower() {
+  if (!imgBase64) return;
+  const btn = document.getElementById('identify-btn');
+  btn.disabled = true;
+  document.getElementById('identify-text').innerHTML = '<span class="spinner"></span> 识别中...';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imgBase64 } },
+          { type: 'text', text: `你是专业植物学家。识别图片中的花卉/植物，仅返回JSON，无其他文字：{"name":"中文名","species":"学名","light":"全日照/半日照/散射光/耐阴","water":"每天/2-3天一次/每周一次/2周一次/按需浇水","care":"养护建议30字以内","confidence":"高/中/低"}。无法识别则返回{"error":"无法识别"}` }
+        ]}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(c => c.text || '').join('').replace(/```json|```/g,'').trim();
+    let r;
+    try { r = JSON.parse(text); } catch { r = { error: '解析失败' }; }
+    if (r.error) {
+      showAI(`⚠️ ${r.error}，请手动填写`, false);
+    } else {
+      if (!document.getElementById('f-name').value) document.getElementById('f-name').value = r.name || '';
+      document.getElementById('f-species').value = r.species || '';
+      if (r.light) document.getElementById('f-light').value = r.light;
+      if (r.water) document.getElementById('f-water').value = r.water;
+      if (r.care && !document.getElementById('f-note').value) document.getElementById('f-note').value = r.care;
+      const c = r.confidence === '高' ? '✅' : r.confidence === '中' ? '🔶' : '⚠️';
+      showAI(`识别为 <strong>${r.name}</strong>（${r.species || ''}）\n置信度：${c} ${r.confidence}\n${r.care || ''}`, true);
+    }
+  } catch { showAI('网络错误，请稍后重试', false); }
+  btn.disabled = false;
+  document.getElementById('identify-text').textContent = '✨ 重新识别';
+}
+
+function showAI(html, ok) {
+  const el = document.getElementById('ai-badge');
+  el.style.display = 'flex';
+  el.style.background = ok ? 'linear-gradient(135deg,#1a4731,#2d6a4f)' : 'linear-gradient(135deg,#7B2D2D,#B54040)';
+  document.getElementById('ai-text').innerHTML = html.replace(/\n/g, '<br>');
+}
+
+function saveFlower() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('请填写花草名称'); return; }
+  const flower = {
+    id: Date.now().toString(), name,
+    species: document.getElementById('f-species').value.trim(),
+    light: document.getElementById('f-light').value,
+    water: document.getElementById('f-water').value,
+    note: document.getElementById('f-note').value.trim(),
+    img: imgDataUrl,
+    date: new Date().toLocaleDateString('zh-CN'),
+    logs: [],
+    aiInfo: document.getElementById('ai-text').textContent || ''
+  };
+  flowers.push(flower);
+  save(); showView('home');
+}
+
+function openDetail(id) {
+  currentId = id;
+  const f = flowers.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('d-name').textContent = f.name;
+  document.getElementById('d-species').textContent = f.species || '';
+  if (f.img) {
+    document.getElementById('d-img').src = f.img;
+    document.getElementById('d-img').style.display = 'block';
+    document.getElementById('d-placeholder').style.display = 'none';
+  } else {
+    document.getElementById('d-img').style.display = 'none';
+    document.getElementById('d-placeholder').style.display = 'flex';
+  }
+  const items = [
+    f.light && ['☀️', f.light, '光照'],
+    f.water && ['💧', f.water, '浇水'],
+    ['📅', f.date, '添加日期'],
+    ['📝', (f.logs?.length || 0) + ' 条', '日志'],
+  ].filter(Boolean);
+  document.getElementById('d-info').innerHTML = items.map(([i,v,l]) =>
+    `<div class="info-card"><span class="ico">${i}</span><div class="val">${v}</div><div class="lbl">${l}</div></div>`
+  ).join('');
+  const aiCard = document.getElementById('d-ai-card');
+  if (f.aiInfo) { aiCard.style.display = 'block'; document.getElementById('d-ai').textContent = f.aiInfo; }
+  else aiCard.style.display = 'none';
+  const noteCard = document.getElementById('d-note-card');
+  if (f.note) { noteCard.style.display = 'block'; document.getElementById('d-note').textContent = f.note; }
+  else noteCard.style.display = 'none';
+  renderLogs(f);
+  showView('detail');
+}
+
+function renderLogs(f) {
+  const el = document.getElementById('d-logs');
+  if (!f.logs?.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-light);text-align:center;padding:8px">暂无记录，快去养护一下吧 🌱</div>';
+    return;
+  }
+  el.innerHTML = f.logs.slice().reverse().map(l =>
+    `<div class="log-item"><div class="log-date">${l.date}</div>${l.text}</div>`
+  ).join('');
+}
+
+function addLog() {
+  const input = document.getElementById('log-input');
+  const text = input.value.trim();
+  if (!text || !currentId) return;
+  const f = flowers.find(x => x.id === currentId);
+  if (!f) return;
+  if (!f.logs) f.logs = [];
+  f.logs.push({ date: new Date().toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}), text });
+  save(); renderLogs(f); input.value = '';
+}
+
+function deleteFlower() {
+  if (!confirm('确认删除这盆花草？')) return;
+  flowers = flowers.filter(f => f.id !== currentId);
+  save(); showView('home');
+}
+
+function resetForm() {
+  imgBase64 = null; imgDataUrl = null;
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('upload-icon').style.display = 'block';
+  document.getElementById('upload-text').style.display = 'block';
+  document.getElementById('identify-btn').disabled = true;
+  document.getElementById('identify-text').textContent = '✨ 请先上传图片';
+  document.getElementById('ai-badge').style.display = 'none';
+  ['f-name','f-species','f-note'].forEach(id => document.getElementById(id).value = '');
+  ['f-light','f-water'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('photo-input').value = '';
+}
+
+renderHome();
+</script>
+</body>
+</html>
